@@ -10,6 +10,7 @@
 
 .footer-top{
     display: flex;
+    align-items: center;
     margin-top: 24px;
     padding-left: 32px;
     box-sizing: border-box;
