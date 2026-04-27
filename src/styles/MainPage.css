@@ -2,7 +2,7 @@
     display: flex;
     justify-content: center; /* 중앙 정렬 추가 */
     align-items: center;
-    padding: 120px 0px; /* 고정 margin 대신 좌우 5% 유연한 여백 사용 */
+    padding: 20px 0 120px; /* 고정 margin 대신 좌우 5% 유연한 여백 사용 */
     gap: 200px; /* 캘린더와 투두 사이 간격 */
     font-family: 'Paperlogy', sans-serif;
   }
