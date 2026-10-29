@@ -15,7 +15,16 @@ function Profile() {
   const [intro, setIntro] = useState("안녕하세요");
   const [favoriteSong, setFavoriteSong] = useState("내꺼하자 - 인피니트");
 
-  const nickname = "Likelion#1253";
+
+  let nickname = "";
+
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    nickname = user.username || "";
+  } catch (error) {
+    console.error("사용자 정보 불러오기 실패:", error);
+  }
+
 
   const handleClickEditIcon = () => {
     fileInputRef.current?.click();
