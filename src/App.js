@@ -3,11 +3,12 @@ import './App.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import MainPage from './pages/Mainpage/MainPage';
-//import LoginPage from './pages/LoginPage/LoginPage';
+import LoginPage from './pages/LoginPage/LoginPage';
 import MyPage from './pages/MyPage/MyPage';
 import FriendPage from './pages/FriendPage/FriendPage';
 import FriendDetailPage from './pages/FriendPage/FriendDetailPage';
 import { Routes, Route, useLocation } from 'react-router-dom';
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   // 현재 브라우저 주소 정보를 가져온다.
@@ -16,7 +17,9 @@ function App() {
 
   // 현재 경로가 /login이면 로그인 페이지로 판단한다.
   // 이 값은 Header와 Footer를 보여줄지 말지 결정하는 조건으로 사용된다.
-  const isLoginPage = location.pathname === '/login';
+  const isLoginPage =
+   location.pathname === '/login' ||
+   location.pathname === '/login/oauth2/code/kakao';
 
   return (
     <div className="layout">
@@ -26,22 +29,29 @@ function App() {
 
       <div className="content">
         <Routes>
-          {/* 현재 주소가 "/"이면 MainPage 컴포넌트를 화면에 보여준다. */}
-          <Route path="/" element={<MainPage />} />
 
-          {/* 현재 주소가 "/login"이면 LoginPage 컴포넌트를 화면에 보여준다. 
-          <Route path="/login" element={<LoginPage />} />*/}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login/oauth2/code/kakao" element={<LoginPage />} />
 
-          {/* 현재 주소가 "/mypage"이면 MyPage 컴포넌트를 화면에 보여준다. */}
-          <Route path="/mypage" element={<MyPage />} />
+          <Route element={<ProtectedRoute />}>
+        
+            {/* 현재 주소가 "/"이면 MainPage 컴포넌트를 화면에 보여준다. */}
+            <Route path="/" element={<MainPage />} />
 
-          {/* 현재 주소가 "/friends"이면 친구 목록과 친구 검색 기능이 있는 FriendPage를 보여준다. */}
-          <Route path="/friends" element={<FriendPage />} />
+            {/* 현재 주소가 "/login"이면 LoginPage 컴포넌트를 화면에 보여준다. */}
+          
 
-          {/* "/friends/:id"는 친구별 상세 페이지 경로이다.
+            {/* 현재 주소가 "/mypage"이면 MyPage 컴포넌트를 화면에 보여준다. */}
+            <Route path="/mypage" element={<MyPage />} />
+
+            {/* 현재 주소가 "/friends"이면 친구 목록과 친구 검색 기능이 있는 FriendPage를 보여준다. */}
+            <Route path="/friends" element={<FriendPage />} />
+
+            {/* "/friends/:id"는 친구별 상세 페이지 경로이다.
               :id 자리에는 선택한 친구의 id 값이 들어갈 수 있으며,
               해당 경로로 이동하면 FriendDetailPage가 화면에 표시된다. */}
-          <Route path="/friends/:id" element={<FriendDetailPage />} />
+            <Route path="/friends/:id" element={<FriendDetailPage />} />
+          </Route>
         </Routes>
       </div>
 
