@@ -6,7 +6,7 @@ const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
-    withdrawCredentials: true,
+    withCredentials: true,
 });
 
 let refreshPromise = null;
@@ -20,7 +20,7 @@ export const renewAccessToken = async () => {
                 const token = data?.result;
 
                 if (
-                    data?.isSucess === false ||
+                    data?.isSuccess === false ||
                     typeof token !== "string" ||
                     !token
                 ) {
