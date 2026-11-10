@@ -1,4 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { get, put, uploadProfile } from "../../Api";
+import config from "../../Config";
 
 const defaultProfileImage = `data:image/svg+xml;utf8,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
@@ -12,50 +14,89 @@ function Profile() {
 
   const [previewUrl, setPreviewUrl] = useState("");
   const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [intro, setIntro] = useState("안녕하세요");
+  const [nickname, setNickname] = useState("");
+  const [intro, setIntro] = useState("");
   const [favoriteSong, setFavoriteSong] = useState("내꺼하자 - 인피니트");
 
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
 
-  let nickname = "";
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
 
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    nickname = user.username || "";
-  } catch (error) {
-    console.error("사용자 정보 불러오기 실패:", error);
-  }
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
+  const fetchProfileData = async () => {
+    try {
+      const response = await get(config.PROFILE.GET);
+      const result = response?.result;
+
+      console.log("프로필 데이터:", result);
+
+      setNickname(result?.username || "");
+      setIntro(result?.introduction || "");
+      setProfileImageUrl(result?.profileImageUrl || null);
+
+    } catch (error) {
+      console.error("프로필 데이터 불러오기 실패:", error);
+    }
+  };
 
   const handleClickEditIcon = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     setSelectedImageFile(file);
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
     setPreviewUrl(URL.createObjectURL(file));
   };
 
-  const handleSaveProfile = () => {
-    const profileData = {
-      nickname,
-      intro,
-      favoriteSong,
-      imageFileName: selectedImageFile?.name || "기본 이미지",
-    };
+  const handleSaveProfile = async () => {
+    let introSaved = false;
 
-    console.log("저장된 프로필 정보:", profileData);
-    alert("프로필이 저장되었습니다.");
+    try {
+      const introResponse = await put(config.PROFILE.INTRO, {
+        introduce: intro,
+      });
+
+      if (introResponse?.isSuccess === false) {
+        throw new Error(introResponse.message || "소개글 저장 실패");
+      }
+      introSaved = true;
+
+      if (selectedImageFile) {
+        const imageResponse = await uploadProfile(config.PROFILE.PUT, {
+          imageFile: selectedImageFile,
+        });
+
+        if (imageResponse?.isSuccess === false) {
+          throw new Error(imageResponse.message || "프로필 이미지 저장 실패");
+        }
+
+        setProfileImageUrl(imageResponse.result?.profileImageUrl || profileImageUrl);
+        setSelectedImageFile(null);
+        setPreviewUrl("");
+      }
+
+      alert("프로필이 저장됐어요.");
+    } catch (error) {
+      console.error("프로필 저장 실패:", error);
+      alert(
+        introSaved
+          ? "소개글은 저장됐지만 프로필 이미지 저장에 실패했어요."
+          : "프로필 저장에 실패했어요."
+      );
+    }
   };
 
-  const displayImageSrc = previewUrl || defaultProfileImage;
+  const displayImageSrc = previewUrl || profileImageUrl || defaultProfileImage;
 
   return (
     <section className="profile-section">
@@ -125,6 +166,5 @@ function Profile() {
       </div>
     </section>
   );
-}
-
+};
 export default Profile;

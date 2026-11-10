@@ -11,6 +11,13 @@ const api = axios.create({
 
 let refreshPromise = null;
 
+const validateContentType = (response) => {
+  const contentType = response.headers?.["content-type"] || "";
+  if (!contentType.includes("json")) {
+    console.warn("JSON이 아닌 응답 Content-Type:", contentType);
+  }
+};
+
 
 export const renewAccessToken = async () => {
     if (!refreshPromise) {
@@ -83,5 +90,37 @@ api.interceptors.response.use(
         }
     }
 )
+
+// ===== 공통 요청 함수들 =====
+
+// GET
+export const get = async (endpoint, params = {}, options = {}) => {
+  const response = await api.get(endpoint, { params, ...options });
+  validateContentType(response);
+  return response.data;
+};
+
+// PUT (JSON)
+export const put = async (endpoint, data = {}, options = {}) => {
+  const response = await api.put(endpoint, data, options);
+  validateContentType(response);
+  return response.data;
+};
+
+export const uploadProfile = async (endpoint, { imageFile }, options = {}) => {
+  const formData = new FormData();
+  formData.append("image", imageFile);
+
+  const response = await api.request({
+    url: endpoint,
+    method: "put",
+    data: formData,
+    headers: { "Content-Type": "multipart/form-data" },
+    ...options,
+  });
+
+  validateContentType(response);
+  return response.data;
+};
 
 export default api;
