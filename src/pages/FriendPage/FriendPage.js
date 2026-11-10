@@ -4,20 +4,8 @@ import FriendSearch from "./FriendSearch";
 import FriendUnfollowModal from "./FriendUnfollowModal";
 import api from "../../Api";
 import config from "../../Config";
+import { toFriendModel } from "./friendModel";
 import "../../styles/FriendPage.css";
-
-function toFriendModel(user) {
-    const [name, tag = ""] = (user.userName || "").split("#");
-
-    return {
-        id: String(user.userId),
-        userId: user.userId,
-        name: name || "이름 없음",
-        tag,
-        bio: user.introduction || "",
-        profileImageUrl: user.profileImageUrl || null,
-    };
-}
 
 function FriendPage() {
     const [followList, setFollowList] = useState([]);
@@ -29,6 +17,10 @@ function FriendPage() {
     const [isRemoving, setIsRemoving] = useState(false);
     const [removeError, setRemoveError] = useState("");
     const removingRef = useRef(false);
+    const followingRef = useRef(false);
+    const [followingId, setFollowingId] = useState(null);
+    const [followError, setFollowError] = useState("");
+    const [searchRefreshKey, setSearchRefreshKey] = useState(0);
 
     useEffect(() => {
         let active = true;
@@ -71,12 +63,54 @@ function FriendPage() {
         };
     }, [reloadCount]);
 
-    const handleFollow = () => {
-        alert("팔로우 기능은 준비 중입니다.");
+    const handleFollow = async (user) => {
+        if (
+            !user ||
+            user.userId == null ||
+            loading ||
+            loadError ||
+            isModalOpen ||
+            followingRef.current ||
+            removingRef.current ||
+            followList.some((friend) => friend.id === user.id)
+        ) {
+            return;
+        }
+
+        followingRef.current = true;
+        setFollowingId(user.id);
+        setFollowError("");
+
+        try {
+            const { data } = await api.post(config.FOLLOW.CREATE, {
+                toUserId: user.userId,
+            });
+
+            if (
+                data?.isSuccess === false ||
+                data?.result?.userId == null ||
+                String(data.result.userId) !== user.id
+            ) {
+                throw new Error("팔로우 응답을 확인해 주세요.");
+            }
+
+            const newFriend = toFriendModel(data.result);
+            setFollowList((prev) =>
+                prev.some((friend) => friend.id === newFriend.id)
+                    ? prev
+                    : [...prev, newFriend]
+            );
+            setSearchRefreshKey((value) => value + 1);
+        } catch {
+            setFollowError("팔로우에 실패했습니다. 다시 시도해 주세요.");
+        } finally {
+            followingRef.current = false;
+            setFollowingId(null);
+        }
     };
 
     const handleClickRemove = (friend) => {
-        if (removingRef.current) return;
+        if (removingRef.current || followingRef.current) return;
 
         setSelectedFriend(friend);
         setRemoveError("");
@@ -84,7 +118,7 @@ function FriendPage() {
     };
 
     const handleConfirmRemove = async () => {
-        if (!selectedFriend || removingRef.current) return;
+        if (!selectedFriend || removingRef.current || followingRef.current) return;
 
         removingRef.current = true;
         setIsRemoving(true);
@@ -104,6 +138,7 @@ function FriendPage() {
             );
             setIsModalOpen(false);
             setSelectedFriend(null);
+            setSearchRefreshKey((value) => value + 1);
         } catch {
             setRemoveError("언팔로우에 실패했습니다. 다시 시도해 주세요.");
         } finally {
@@ -136,6 +171,15 @@ function FriendPage() {
                     <FriendSearch
                         onFollow={handleFollow}
                         followingList={followList}
+                        followingId={followingId}
+                        followError={followError}
+                        followDisabled={
+                            loading ||
+                            Boolean(loadError) ||
+                            isModalOpen ||
+                            isRemoving
+                        }
+                        refreshKey={searchRefreshKey}
                     />
                 </div>
             </div>
