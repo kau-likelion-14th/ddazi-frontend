@@ -8,6 +8,9 @@ function FriendList(
     friends = [],
     onClickRemove,
     emptyText = "팔로우하는 친구가 없습니다.",
+    loading = false,
+    error = "",
+    onRetry,
   }
 ) {
   // useNavigate는 코드 안에서 특정 주소로 페이지를 이동시키기 위해 사용한다.
@@ -25,9 +28,18 @@ function FriendList(
       {/* 부모 컴포넌트에서 전달받은 title 값을 친구 목록 제목으로 출력한다. */}
       <h2 className="friend-list__title">{title}</h2>
 
-      {/* friends 배열이 비어 있으면 emptyText를 보여주고,
-          배열에 친구 데이터가 있으면 map으로 친구 수만큼 목록을 반복해서 만든다. */}
-      {friends.length === 0 ? (
+      {loading ? (
+        <div className="friend-list__empty" role="status">
+          팔로우 목록을 불러오는 중...
+        </div>
+      ) : error ? (
+        <div className="friend-list__empty">
+          <p role="alert">{error}</p>
+          <button type="button" onClick={onRetry}>
+            다시 시도
+          </button>
+        </div>
+      ) : friends.length === 0 ? (
         <div className="friend-list__empty">{emptyText}</div>
       ) : (
         <ul className="friend-list__items">
