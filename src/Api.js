@@ -107,6 +107,13 @@ export const put = async (endpoint, data = {}, options = {}) => {
   return response.data;
 };
 
+// PATCH (일반 JSON PATCH)
+export const patch = async (endpoint, data = {}, options = {}) => {
+  const response = await api.patch(endpoint, data, options);
+  validateContentType(response);
+  return response.data;
+};
+
 export const uploadProfile = async (endpoint, { imageFile }, options = {}) => {
   const formData = new FormData();
   formData.append("image", imageFile);
