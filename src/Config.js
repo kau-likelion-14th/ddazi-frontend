@@ -18,6 +18,37 @@ const config = {
         SEARCH: "/api/follow/search",
         CREATE: "/api/follow",
     },
+
+    STATISTICS: {
+        GET: "/api/statistic",
+    },
+
+    YOUTUBE: {
+        SEARCH: "/api/youtube/search",
+        ME: "/api/youtube/me",
+        SAVE: "/api/youtube/save",
+    },
+
+    PROFILE: {
+        GET: "/api/profile",
+        PUT: "/api/profile",
+        DELETE: "/api/profile",
+        INTRO: "/api/profile/intro",
+    },
+
+    CALENDAR: {
+        GET: "/api/todos/calendar",
+    },
+
+    TODOS: {
+        LIST: "/api/todos",
+        TOGGLE_COMPLETE: (todoId, date) =>
+            `/api/todos/${todoId}/dates/${date}/complete`,
+    },
+
+    CATEGORIES: {
+        GET: "/api/categories",
+    },
 };
 
 export default config;
