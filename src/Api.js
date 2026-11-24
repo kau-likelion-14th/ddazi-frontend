@@ -101,7 +101,7 @@ export const get = async (endpoint, params = {}, options = {}) => {
 };
 
 // POST (JSON)
-export const post = async (endpoint, data, options = {}) => {
+export const post = async (endpoint, data = {}, options = {}) => {
   const response = await api.post(endpoint, data, options);
   validateContentType(response);
   return response.data;

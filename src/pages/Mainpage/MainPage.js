@@ -85,7 +85,6 @@ const MainPage = () => {
       <Todo
         selectedDate={selectedDate}
         todosByDate={todosByDate}
-        setTodosByDate={setTodosByDate}
         onTodoUpdated={() => setRefreshKey((prev) => prev + 1)}
       />
     </div>
