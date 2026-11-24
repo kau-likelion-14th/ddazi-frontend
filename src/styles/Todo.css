@@ -29,29 +29,30 @@
 .todo-item {
     display: flex;
     align-items: center;
-    gap: 30px;
+    gap: 16px;
 }
 
 .todo-text {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     font-weight: 400;
     font-size: 18px;
+    overflow-wrap: anywhere;
 }
 
 .todo-category {
     font-weight: 400;
     font-size: 18px;
     border-radius: 5px;
-    width: 180px;
+    flex: 0 0 auto;
+    min-width: 100px;
     height: 30px;
-    margin-left: 100px;
+    padding: 0 12px;
+    margin-left: 0;
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
     align-items: center;
-}
-
-.todo-text {
-    align-self:center;
 }
 
 .checkbox {
@@ -83,4 +84,20 @@
 .checkbox.checked::after {
     content: '✓';
     color: white
+}
+
+@media (max-width: 480px) {
+    .todo-item {
+        gap: 10px;
+    }
+
+    .todo-text,
+    .todo-category {
+        font-size: 14px;
+    }
+
+    .todo-category {
+        min-width: 72px;
+        padding: 0 8px;
+    }
 }

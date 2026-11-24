@@ -100,9 +100,23 @@ export const get = async (endpoint, params = {}, options = {}) => {
   return response.data;
 };
 
+// POST (JSON)
+export const post = async (endpoint, data = {}, options = {}) => {
+  const response = await api.post(endpoint, data, options);
+  validateContentType(response);
+  return response.data;
+};
+
 // PUT (JSON)
 export const put = async (endpoint, data = {}, options = {}) => {
   const response = await api.put(endpoint, data, options);
+  validateContentType(response);
+  return response.data;
+};
+
+// DELETE
+export const del = async (endpoint, options = {}) => {
+  const response = await api.delete(endpoint, options);
   validateContentType(response);
   return response.data;
 };
