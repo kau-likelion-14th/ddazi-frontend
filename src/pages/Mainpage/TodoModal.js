@@ -9,7 +9,7 @@ const TodoModal = ({
     onSave, 
     onDelete, 
     initialTodo,
-    categories
+    categories = {}
 }) => {
     const isEditMode = Boolean(initialTodo); 
 
@@ -22,10 +22,10 @@ const TodoModal = ({
     useEffect(() => {
         if (!isOpen) return;
 
-        setCategory(initialTodo?.category || "공부");
+        setCategory(initialTodo?.category || Object.keys(categories)[0] || "");
         setText(initialTodo?.text || "");
         setRoutine(initialTodo?.routine || null);
-    }, [isOpen, initialTodo]);
+    }, [isOpen, initialTodo, categories]);
 
     if (!isOpen) return null;
 

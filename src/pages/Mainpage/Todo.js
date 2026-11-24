@@ -1,25 +1,58 @@
-import React, {useMemo, useState} from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { get, patch } from "../../Api";
+import config from "../../Config";
 import "../../styles/Todo.css";
 import "../../styles/TodoModal.css";
 import TodoModal from "./TodoModal";
 
 const uid = () => Date.now() + Math.random();
 
-const Categories = { // 카테고리별 디자인 설정 (배경색과 글자색)
+const categoryStyles = {
     공부: { backgroundColor: '#E5F8F1', color: '#333' },
     운동: { backgroundColor: '#FFC8BE', color: '#333' },
     동아리: { backgroundColor: '#B6DAFF', color: '#333' },
 };
+const categoryPalette = Object.values(categoryStyles);
 
-    const toDateKey = (date) => {
+const toDateKey = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
 };
 
-const Todo = ({ selectedDate, todosByDate, setTodosByDate }) => {
+const Todo = ({ selectedDate, todosByDate, setTodosByDate, onTodoUpdated }) => {
     const dateKey = toDateKey(selectedDate);
+    const [serverCategories, setServerCategories] = useState([]);
+    const [pendingTodoId, setPendingTodoId] = useState(null);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await get(config.CATEGORIES.GET);
+
+                if (response?.isSuccess === false) {
+                    throw new Error(response.message || "카테고리 조회 실패");
+                }
+
+                setServerCategories(Array.isArray(response?.result) ? response.result : []);
+            } catch (error) {
+                console.error("카테고리 조회 실패:", error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    const Categories = useMemo(
+        () => Object.fromEntries(
+            serverCategories.map(({ categoryName }, index) => [
+                categoryName,
+                categoryStyles[categoryName] || categoryPalette[index % categoryPalette.length],
+            ])
+        ),
+        [serverCategories]
+    );
 
     const todos = todosByDate[dateKey] ?? []; // 해당 날짜의 할 일 목록을 가져오되, 데이터가 없으면 빈 배열([])로 처리
 
@@ -44,12 +77,26 @@ const Todo = ({ selectedDate, todosByDate, setTodosByDate }) => {
         setIsModalOpen(true);
     };
 
-    const TodoCompleted = (id) => { // 체크박스 클릭 시 완료 상태 토글 (true <-> false)
-        setTodos((prev) =>
-            prev.map((t) =>
-                t.id === id ? { ...t, completed: !t.completed } : t
-            )
-        );
+    const TodoCompleted = async (todo) => {
+        setPendingTodoId(todo.id);
+
+        try {
+            const response = await patch(
+                config.TODOS.TOGGLE_COMPLETE(todo.id, dateKey),
+                { completed: !todo.completed }
+            );
+
+            if (response?.isSuccess === false) {
+                throw new Error(response.message || "Todo 완료 상태 변경 실패");
+            }
+
+            onTodoUpdated?.();
+        } catch (error) {
+            console.error("Todo 완료 상태 변경 실패:", error);
+            alert("완료 상태를 변경하지 못했어요.");
+        } finally {
+            setPendingTodoId(null);
+        }
     };
 
     const handledSaveTodo = ({text, category}) => { // 저장 버튼 클릭 시 (수정 또는 추가)
@@ -97,9 +144,10 @@ const Todo = ({ selectedDate, todosByDate, setTodosByDate }) => {
                     >
                         <button 
                             className={`checkbox ${t.completed ? 'checked' : ''}`} 
+                            disabled={pendingTodoId === t.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                TodoCompleted(t.id);
+                                TodoCompleted(t);
                             }}
                         >
                         </button>

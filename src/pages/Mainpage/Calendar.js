@@ -1,6 +1,6 @@
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import React, { useState } from 'react';
+import React from 'react';
 import "../../styles/Calendar.css";
 
 const toDateKey = (date) => {
@@ -11,25 +11,24 @@ const toDateKey = (date) => {
 };
 
 export default function CustomCalendar({
-    initialDate = new Date(),
+    selectedDate,
     onDateChange,
-    todosByDate = {},
+    viewDate,
+    onViewDateChange,
+    calendarByDate = {},
 }) {
-    const [selectedDate, setSelectedDate] = useState(initialDate);
-
     const handledDateChange = (value) => {
         const next = value instanceof Date ? value : value?.[0];
-        setSelectedDate(next);
+        if (!next) return;
         onDateChange?.(next);
     };
 
     const getDayMeta = (date) => {
         const key = toDateKey(date);
-        const list = todosByDate[key] ?? [];
-        if (list.length === 0) return { hasTodos: false, remaining: 0, allDone: false };
-
-        const remaining = list.filter((t) => !t.completed).length;
-        return { hasTodos: true, remaining, allDone: remaining === 0 };
+        const day = calendarByDate[key];
+        const hasTodos = day?.hasTodo === true;
+        const remaining = day?.remaining ?? 0;
+        return { hasTodos, remaining, allDone: hasTodos && remaining === 0 };
     };
 
     return (
@@ -37,6 +36,10 @@ export default function CustomCalendar({
             <Calendar
                 onChange={handledDateChange}
                 value={selectedDate}
+                activeStartDate={viewDate}
+                onActiveStartDateChange={({ activeStartDate }) => {
+                    if (activeStartDate) onViewDateChange?.(activeStartDate);
+                }}
                 calendarType='gregory'
                 view='month'
                 prev2Label={null}
