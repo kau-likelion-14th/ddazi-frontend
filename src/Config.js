@@ -19,6 +19,16 @@ const config = {
         CREATE: "/api/follow",
     },
 
+    STATISTICS: {
+        GET: "/api/statistic",
+    },
+
+    YOUTUBE: {
+        SEARCH: "/api/youtube/search",
+        ME: "/api/youtube/me",
+        SAVE: "/api/youtube/save",
+    },
+
     PROFILE: {
         GET: "/api/profile",
         PUT: "/api/profile",

@@ -9,8 +9,10 @@ function StatCard({ stat }) {
       </div>
 
       <p className="stat-value">
-        <span>{stat.value}</span>
-        {stat.unit && <span className="stat-unit">{stat.unit}</span>}
+        <span>{stat.statistics?.value ?? 0}</span>
+        {stat.statistics?.unit && (
+          <span className="stat-unit">{stat.statistics.unit}</span>
+        )}
       </p>
     </article>
   );

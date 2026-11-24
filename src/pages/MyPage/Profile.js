@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { get, put, uploadProfile } from "../../Api";
+import { get, put, post, uploadProfile } from "../../Api";
 import config from "../../Config";
 
 const defaultProfileImage = `data:image/svg+xml;utf8,${encodeURIComponent(`
@@ -16,7 +16,10 @@ function Profile() {
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [nickname, setNickname] = useState("");
   const [intro, setIntro] = useState("");
-  const [favoriteSong, setFavoriteSong] = useState("내꺼하자 - 인피니트");
+  const [song, setSong] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedSong, setSelectedSong] = useState();
 
   const [profileImageUrl, setProfileImageUrl] = useState(null);
 
@@ -35,11 +38,26 @@ function Profile() {
       const response = await get(config.PROFILE.GET);
       const result = response?.result;
 
-      console.log("프로필 데이터:", result);
 
       setNickname(result?.username || "");
       setIntro(result?.introduction || "");
       setProfileImageUrl(result?.profileImageUrl || null);
+
+      const songResponse = await get(config.YOUTUBE.ME);
+
+      if (
+        songResponse?.isSuccess === false ||
+        !Array.isArray(songResponse?.result)
+      ) {
+        throw new Error("저장된 노래 조회 실패");
+      }
+
+      const songs = [...songResponse.result].sort(
+        (a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt)
+      );
+
+      const latest = songs[0];
+      setSong(latest ? `${latest.title} - ${latest.artist}` : "");
 
     } catch (error) {
       console.error("프로필 데이터 불러오기 실패:", error);
@@ -67,6 +85,7 @@ function Profile() {
       });
 
       if (introResponse?.isSuccess === false) {
+        console.error("소개글 저장 실패:", introResponse);
         throw new Error(introResponse.message || "소개글 저장 실패");
       }
       introSaved = true;
@@ -79,6 +98,8 @@ function Profile() {
         if (imageResponse?.isSuccess === false) {
           throw new Error(imageResponse.message || "프로필 이미지 저장 실패");
         }
+
+        alert("프로필 이미지가 저장됐어요.");
 
         setProfileImageUrl(imageResponse.result?.profileImageUrl || profileImageUrl);
         setSelectedImageFile(null);
@@ -97,6 +118,61 @@ function Profile() {
   };
 
   const displayImageSrc = previewUrl || profileImageUrl || defaultProfileImage;
+
+  const handleSearchSong = async () => {
+    if (!song.trim()) {
+      alert("검색어를 입력해주세요.");
+      return;
+    }
+
+    try {
+      const response = await get(
+        `${config.YOUTUBE.SEARCH}?q=${encodeURIComponent(song.trim())}`
+      );
+
+      console.log("노래 검색 결과:", response);
+
+      const results = response?.result ?? [];
+
+      setSearchResults(results);
+
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error("노래 검색 실패:", error);
+      alert("노래 검색에 실패했어요.");
+    }
+  }
+
+  const handleSaveSong = async (selectedSong) => {
+  if (!selectedSong) return;
+
+  try {
+    const response = await post(config.YOUTUBE.SAVE, {
+      songId: selectedSong.songId,
+      title: selectedSong.title,
+      artist: selectedSong.artist,
+    });
+
+    if (response?.isSuccess === false) {
+      throw new Error(response.message || "노래 저장 실패");
+    }
+
+    // 저장 성공 후 화면 갱신
+    setSong(`${selectedSong.title} - ${selectedSong.artist}`);
+    setShowSearchResults(false);
+    setSearchResults([]);
+
+    alert("좋아하는 노래가 저장됐어요.");
+  } catch (error) {
+    console.error("노래 저장 실패:", error.response?.data || error);
+
+    if (error.response?.status === 409) {
+      alert("이미 저장된 노래입니다.");
+    } else {
+      alert("노래 저장에 실패했어요.");
+    }
+  }
+};
 
   return (
     <section className="profile-section">
@@ -156,15 +232,49 @@ function Profile() {
             <span className="song-icon">🎵</span>
             <input
               className="song-input"
-              value={favoriteSong}
-              onChange={(e) => setFavoriteSong(e.target.value)}
+              value={song}
               placeholder="좋아하는 노래를 입력하세요"
+              onChange={(e) => {
+                setSong(e.target.value);
+                setSelectedSong(null);
+                setShowSearchResults(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearchSong();
+                }
+              }}
+              
             />
-            <span className="search-icon">⌕</span>
+            <span className="search-icon"
+              src = {handleSearchSong}
+              onClick={handleSearchSong}
+              style={{ cursor: "pointer" }}
+            >⌕</span>
           </div>
         </label>
+
+        {showSearchResults &&
+        <div className="song-search-results">
+          {searchResults.length === 0 ? (
+            <p>검색결과가 없습니다.</p>
+          ) : (
+            searchResults.map((item) => (
+              <div
+                key={(item.songId)}
+                className="song-search-item"
+                onClick = {() => handleSaveSong(item)}
+              >
+                  {item.title} - {item.artist}
+              </div>
+            ))
+          )}
+        
+        
       </div>
+      }
+    </div>
     </section>
   );
-};
+}
 export default Profile;
