@@ -9,7 +9,8 @@ const TodoModal = ({
     onSave, 
     onDelete, 
     initialTodo,
-    categories = {}
+    categories = {},
+    busy = false,
 }) => {
     const isEditMode = Boolean(initialTodo); 
 
@@ -30,7 +31,15 @@ const TodoModal = ({
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if(!text.trim()) return;
+        if (!text.trim() || busy) return;
+
+        if (
+            routine &&
+            (!routine.startDate || !routine.endDate || !routine.week || routine.startDate > routine.endDate)
+        ) {
+            alert("루틴의 시작일, 종료일, 반복 요일을 확인해 주세요.");
+            return;
+        }
 
         onSave({ 
             text: text.trim(), 
@@ -87,8 +96,15 @@ const TodoModal = ({
                         type="button"
                         className="routine-row"
                         onClick={() => setIsRoutineModalOpen(true)}
+                        disabled={busy || (isEditMode && !initialTodo?.routineEnabled)}
                     >
-                        <div className="routine-label">루틴 등록하기</div>
+                        <div className="routine-label">
+                            {isEditMode && !initialTodo?.routineEnabled
+                                ? "일반 Todo는 루틴으로 변경할 수 없어요"
+                                : routine
+                                  ? "루틴 설정됨 · 수정하기"
+                                  : "루틴 등록하기"}
+                        </div>
                         <div className="routine-button">{"›"}</div>
                     </button>
                 </div>
@@ -96,16 +112,16 @@ const TodoModal = ({
                     <button
                         className={`leftbutton ${isEditMode ? '' : 'disabled'}`}
                         onClick={onDelete}
-                        disabled={!isEditMode}
+                        disabled={!isEditMode || busy}
                     >
                         삭제
                     </button>
                     <button
                         className={`rightbutton ${text.trim() ? '' : 'disabled'}`}
                         onClick={handleSave}
-                        disabled={!text.trim()}
+                        disabled={!text.trim() || busy}
                     >
-                        저장
+                        {busy ? "처리 중..." : "저장"}
                     </button>
                 </div>
                 <RoutineModal

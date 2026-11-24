@@ -9,8 +9,9 @@
 }
 
 .modal-container {
-    width: 400px;
-    height: 540px;
+    width: min(400px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     background: white;
     border-radius: 24px;
     padding: 28px 24px;
@@ -96,6 +97,11 @@
     cursor: pointer;
 }
 
+.routine-row:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
 .routine-label {
     font-weight: 500;
     font-size: 16px;
@@ -142,6 +148,13 @@
     background: #0A84FF;
     border: solid 2px #0A84FF;
     color: white;
+}
+
+.rightbutton:disabled,
+.leftbutton:disabled,
+.leftbutton2:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .disabled {
@@ -222,4 +235,10 @@
     width: 18px;
     height: 18px;
     margin: 0;
+}
+
+.routine-error {
+    margin: -12px 0 16px;
+    color: #c62828;
+    font-size: 14px;
 }

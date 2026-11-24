@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { get, patch } from "../../Api";
+import { del, get, patch, post, put } from "../../Api";
 import config from "../../Config";
 import "../../styles/Todo.css";
 import "../../styles/TodoModal.css";
 import TodoModal from "./TodoModal";
-
-const uid = () => Date.now() + Math.random();
 
 const categoryStyles = {
     공부: { backgroundColor: '#E5F8F1', color: '#333' },
@@ -21,10 +19,13 @@ const toDateKey = (date) => {
     return `${y}-${m}-${d}`;
 };
 
-const Todo = ({ selectedDate, todosByDate, setTodosByDate, onTodoUpdated }) => {
+const Todo = ({ selectedDate, todosByDate, onTodoUpdated }) => {
     const dateKey = toDateKey(selectedDate);
     const [serverCategories, setServerCategories] = useState([]);
     const [pendingTodoId, setPendingTodoId] = useState(null);
+    const [loadingTodoId, setLoadingTodoId] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -54,30 +55,58 @@ const Todo = ({ selectedDate, todosByDate, setTodosByDate, onTodoUpdated }) => {
         [serverCategories]
     );
 
-    const todos = todosByDate[dateKey] ?? []; // 해당 날짜의 할 일 목록을 가져오되, 데이터가 없으면 빈 배열([])로 처리
+    const todos = todosByDate[dateKey] ?? [];
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingTodo, setEditingTodo] = useState(null);
+    const isBusy = isSaving || isDeleting;
 
-    const setTodos = (updater) => {
-        setTodosByDate((prev) => {
-            const current = prev[dateKey] ?? []; // 현재 날짜의 할 일, ?? []를 붙여줌으로써, 데이터가 없는 날짜라도 **"일단 빈 상자([])를 하나 준비해줘"**라고 명령하는 것입니다. 덕분에 에러 없이 새 할 일을 그 상자에 담을 수 있
-            const nextTodos = typeof updater === "function" ? updater(current) : updater; // 업데이트 방식이 함수면 실행하고, 아니면 값 그대로 사용
-            return { ...prev, [dateKey]: nextTodos }; // 기존 데이터(...prev)는 유지하고, 현재 날짜의 데이터만 새것으로 교체
-        });
-    };
-
-    const [isModalOpen, setIsModalOpen] = useState(false); // 모달이 열렸는지 여부
-    const [editingTodo, setEditingTodo] = useState(null); // 지금 수정 중인 할 일 정보 (새로 만들 때는 null)
-
-    const openModal = () => { // [+] 버튼 눌렀을 때 (새로 만들기)
+    const openModal = () => {
         setEditingTodo(null);
         setIsModalOpen(true);
     };
 
-    const openEditModal = (todo) => { // 이미 있는 할 일을 클릭했을 때 (수정하기)
-        setEditingTodo(todo);
-        setIsModalOpen(true);
+    const openEditModal = async (todo) => {
+        if (loadingTodoId !== null || isBusy) return;
+
+        setLoadingTodoId(todo.id);
+        try {
+            const response = await get(config.TODOS.DETAIL(todo.id));
+            const detail = response?.result;
+
+            if (
+                response?.isSuccess === false ||
+                detail?.todoId == null ||
+                typeof detail.description !== "string" ||
+                typeof detail.categoryName !== "string"
+            ) {
+                throw new Error(response?.message || "Todo 상세 정보가 올바르지 않습니다.");
+            }
+
+            setEditingTodo({
+                id: detail.todoId,
+                text: detail.description,
+                category: detail.categoryName,
+                completed: todo.completed,
+                routineEnabled: detail.routineEnabled === true,
+                routine: detail.routineEnabled
+                    ? {
+                        startDate: detail.startDate || "",
+                        endDate: detail.endDate || "",
+                        week: detail.week || "",
+                    }
+                    : null,
+            });
+            setIsModalOpen(true);
+        } catch (error) {
+            console.error("Todo 상세 조회 실패:", error);
+            alert("Todo 상세 정보를 불러오지 못했어요.");
+        } finally {
+            setLoadingTodoId(null);
+        }
     };
 
-    const TodoCompleted = async (todo) => {
+    const handleTodoCompleted = async (todo) => {
+        if (pendingTodoId !== null || isBusy) return;
         setPendingTodoId(todo.id);
 
         try {
@@ -99,75 +128,127 @@ const Todo = ({ selectedDate, todosByDate, setTodosByDate, onTodoUpdated }) => {
         }
     };
 
-    const handledSaveTodo = ({text, category}) => { // 저장 버튼 클릭 시 (수정 또는 추가)
-        if (editingTodo) { // 1. 수정 모드일 때
-            setTodos((prev) =>
-                prev.map((t) => 
-                    t.id === editingTodo.id 
-                        ? { ...t, text, category } 
-                        : t
-                )
-            );
-        } else { // 2. 새로 추가 모드일 때
-            setTodos((prev) => [
-                  ...prev, // ← "기존에 있던 애들 다 데리고 와!" (복사)
-                { id: uid(), text, category, completed: false },
-            ]);
+    const handleSaveTodo = async ({ text, category, routine }) => {
+        if (!text.trim() || isBusy) return;
+
+        const routineEnabled = Boolean(routine);
+        const payload = {
+            description: text.trim(),
+            categoryName: category,
+            routineEnabled,
+            ...(routineEnabled
+                ? {
+                    startDate: routine.startDate,
+                    endDate: routine.endDate,
+                    week: routine.week,
+                }
+                : {}),
+        };
+
+        if (
+            editingTodo &&
+            editingTodo.routineEnabled !== routineEnabled
+        ) {
+            alert("일반 Todo와 루틴 Todo 간 유형 변경은 지원되지 않아요.");
+            return;
         }
-        setIsModalOpen(false);
+
+        setIsSaving(true);
+        try {
+            const response = editingTodo
+                ? await put(config.TODOS.UPDATE(editingTodo.id), payload)
+                : await post(
+                    config.TODOS.CREATE,
+                    payload,
+                    routineEnabled ? {} : { params: { date: dateKey } }
+                );
+
+            if (response?.isSuccess === false) {
+                throw new Error(response.message || "Todo 저장 실패");
+            }
+
+            setIsModalOpen(false);
+            setEditingTodo(null);
+            onTodoUpdated?.();
+        } catch (error) {
+            console.error("Todo 저장 실패:", error);
+            alert("Todo를 저장하지 못했어요. 입력한 내용을 확인하고 다시 시도해 주세요.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    const handledDeleteTodo = () => { // 삭제 버튼 클릭 시
-        if (!editingTodo) return;
-        setTodos((prev) => prev.filter((t) => t.id !== editingTodo.id));
-        setIsModalOpen(false);
-    };
+    const handleDeleteTodo = async () => {
+        if (!editingTodo || isBusy) return;
 
-    const counts = useMemo(() => { //통계 계산
-        const total = todos.length; // 전체 개수
-        const done = todos.filter((t) => t.completed).length; // 완료된 개수
-        return { total, done };
-    }, [todos]);
+        setIsDeleting(true);
+        try {
+            const response = await del(
+                config.TODOS.DELETE(editingTodo.id, dateKey)
+            );
+
+            if (response?.isSuccess === false) {
+                throw new Error(response.message || "Todo 삭제 실패");
+            }
+
+            setIsModalOpen(false);
+            setEditingTodo(null);
+            onTodoUpdated?.();
+        } catch (error) {
+            console.error("Todo 삭제 실패:", error);
+            alert("Todo를 삭제하지 못했어요.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     return (
         <div className="todo-container">
             <div className="todo-header">
                 <div className="todo-title">To do List</div>
-                <button className="todo-add" onClick={openModal}>+</button> 
+                <button className="todo-add" onClick={openModal} disabled={isBusy}>+</button>
             </div>
             <div className="todo-list">
-                {todos.map((t) => (
-                    <div 
-                        key={t.id} 
-                        className={`todo-item ${t.completed ? 'done' : ''}`}
-                        onClick={() => openEditModal(t)}
+                {todos.map((todo) => (
+                    <div
+                        key={todo.id}
+                        className={`todo-item ${todo.completed ? 'done' : ''}`}
+                        onClick={() => openEditModal(todo)}
+                        aria-busy={loadingTodoId === todo.id}
                     >
-                        <button 
-                            className={`checkbox ${t.completed ? 'checked' : ''}`} 
-                            disabled={pendingTodoId === t.id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                TodoCompleted(t);
+                        <button
+                            className={`checkbox ${todo.completed ? 'checked' : ''}`}
+                            disabled={pendingTodoId === todo.id || isBusy}
+                            aria-label={todo.completed ? "완료 취소" : "Todo 완료"}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                handleTodoCompleted(todo);
                             }}
-                        >
-                        </button>
-                        <div className="todo-text">{t.text}</div>
-                        <div 
+                        />
+                        <div className="todo-text">
+                            {loadingTodoId === todo.id ? "불러오는 중..." : todo.text}
+                        </div>
+                        <div
                             className="todo-category"
-                            style={Categories[t.category]}
+                            style={Categories[todo.category]}
                         >
-                            {t.category}
+                            {todo.category}
                         </div>
                     </div>
                 ))}
             </div>
-            <TodoModal 
+            <TodoModal
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handledSaveTodo}
-                onDelete={handledDeleteTodo}
+                onClose={() => {
+                    if (isBusy) return;
+                    setIsModalOpen(false);
+                    setEditingTodo(null);
+                }}
+                onSave={handleSaveTodo}
+                onDelete={handleDeleteTodo}
                 initialTodo={editingTodo}
                 categories={Categories}
+                busy={isBusy}
             />
         </div>
     );
