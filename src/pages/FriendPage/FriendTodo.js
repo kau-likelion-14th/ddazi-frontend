@@ -3,39 +3,7 @@ import React, { useMemo } from "react";
 import "../../styles/Todo.css";
 import "../../styles/FriendTodo.css";
 
-// 친구 상세 페이지에서 보여줄 임시 todo 데이터이다.
-// 현재 코드는 이 배열을 기준으로 todo 목록을 렌더링한다.
-const dummyTodos = [
-  { id: 1, text: "프론트 보충자료 읽기", category: "공부", completed: true },
-  { id: 2, text: "FriendTodo 구현하기", category: "공부", completed: false },
-  { id: 3, text: "동아리 회의", category: "동아리", completed: false },
-];
-
-// todo 카테고리별 스타일 정보이다.
-// todo의 category 값과 같은 key를 찾아 카테고리 뱃지 색상을 적용한다.
-const dummyCategories = {
-  공부: { backgroundColor: "#E5F8F1", color: "#333" },
-  일상: { backgroundColor: "#FFC8BE", color: "#333" },
-  동아리: { backgroundColor: "#B6DAFF", color: "#333" },
-};
-
-const FriendTodo = ({ title = "To do List" }) => {
-  // 현재 컴포넌트는 dummyTodos를 todo 목록 데이터로 사용한다.
-  const todos = dummyTodos;
-
-  // 현재 컴포넌트는 dummyCategories를 카테고리 스타일 정보로 사용한다.
-  const categories = dummyCategories;
-
-  const counts = useMemo(() => {
-    // 전체 todo 개수를 계산한다.
-    const total = todos.length;
-
-    // completed가 true인 todo만 골라 완료된 todo 개수를 계산한다.
-    const done = todos.filter((t) => t.completed).length;
-
-    // 전체 개수와 완료 개수를 객체로 반환한다.
-    return { total, done };
-  }, [todos]);
+const FriendTodo = ({ title = "To do List", todos = [], categories = {} }) => {
 
   return (
     <div className="friend-todo">
