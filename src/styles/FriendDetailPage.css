@@ -1,5 +1,4 @@
 .friend-detail-page {
-    margin-top: 100px;
     width: 100%;
     background: #ffffff;
   }
@@ -7,7 +6,7 @@
   .friend-detail-page__inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 56px 24px 80px;
+    padding: 20px 24px 80px;
     box-sizing: border-box;
   }
   
@@ -158,4 +157,3 @@
     gap: 56px;
     align-items: start;
   }
-  
