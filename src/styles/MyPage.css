@@ -195,12 +195,14 @@
   }
   
   /* Responsive */
-  
-  @media (max-width: 900px) {
+
+  @media (max-width: 1200px) {
     .mypage-container {
       padding: 0 24px;
     }
+  }
   
+  @media (max-width: 900px) {
     .profile-top {
       flex-direction: column;
       align-items: flex-start;
